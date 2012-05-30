@@ -4,7 +4,7 @@
 -- Bamboo is BSD licensed the same as Mongrel2.
 ------------------------------------------------------------------------
 
-package.path = package.path .. './?.lua;./?/init.lua;../?.lua;../?/init.lua;'
+package.path = package.path .. ';./?.lua;./?/init.lua;../?.lua;../?/init.lua;'
 require 'lglib'
 
 module('bamboo', package.seeall)

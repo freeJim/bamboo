@@ -1,4 +1,4 @@
-#!/usr/bin/env lua
+#!/usr/bin/env luajit
 
 require 'posix'
 require 'signal'
@@ -664,17 +664,21 @@ host = "%s"
 				print('', server.name)
 			end
 		elseif servername == 'all' then
+            os.execute("m2sh load --config "..config_file);
 			print("================== Ready to start servers ===================")
 			for _, server in ipairs(_config.servers) do
 				assert(server and server.name, '[ERROR] server or server.name is nil.')
-				os.execute(('monserver %s %s'):format(config_file, server.name))
+				--os.execute(('monserver %s %s'):format(config_file, server.name))
+			    os.execute(('m2sh start --name %s'):format(server.name))
 			end
 			print("OK.")
 		else
+            os.execute("m2sh load --config "..config_file);
 			print("================== Ready to start server ===================")
 			for _, server in ipairs(_config.servers) do
 				if server and server.name == servername then
-					os.execute(('monserver %s %s'):format(config_file, server.name))
+					--os.execute(('monserver %s %s'):format(config_file, server.name))
+					os.execute(('m2sh start --name %s'):format(server.name))
 				end
 			end
 			print("OK.")
