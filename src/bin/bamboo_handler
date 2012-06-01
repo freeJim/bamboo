@@ -1,4 +1,4 @@
-#!/usr/bin/env lua
+#!/usr/bin/env luajit 
 
 -- ATTEN: this file is not a module
 package.path = './?.lua;./?/init.lua;./?/src/init.lua;/usr/local/lib/lua/5.1/?.lua;/usr/local/lib/lua/5.1/?/init.lua;' .. package.path
@@ -50,7 +50,7 @@ package.path = package.path + (";%s/?.lua;%s/?/init.lua;"):format(PROJECT_DIR, P
 
 
 
-local redis = require 'bamboo.redis'
+local redis = require 'hiredis'
 
 local DB_HOST = config.DB_HOST or '127.0.0.1'
 local DB_PORT = config.DB_PORT or 6379
@@ -59,8 +59,10 @@ local AUTH = config.AUTH or nil
 
 -- create a redis connection in this process
 -- we will create one redis connection for every process
-BAMBOO_DB = redis.connect {host=DB_HOST, port=DB_PORT, which = WHICH_DB, auth = AUTH}
+BAMBOO_DB = redis.connect(DB_HOST, DB_PORT)
 assert(BAMBOO_DB, '[Error] Database connection is failed.')
+assert(BAMBOO_DB:command("auth",AUTH));
+assert(BAMBOO_DB:command("select",WHICH_DB));
 
 require 'bamboo.util'
 _G['View'] = require 'bamboo.view'
@@ -368,8 +370,16 @@ local function run(conn, config)
     -- add the main monserver request to poll
     -- conn.reqs is the socket pull from monserver
     poller:add(conn.reqs, zmq.POLLIN, monserver_request)
+
     -- start the main loop
-    poller:start()
+    if config.prof then 
+        local prof = require 'profiler'
+        prof.start("prof_11111.out");
+        poller:start()
+        prof.stop();
+    else
+        poller:start()
+    end
 
     print('Bamboo main loop aborted!')
 end
@@ -450,4 +460,4 @@ bamboo.EXPORT_FOR_TESTING = {
 if not istesting then
    start(config)
 end
-   
+

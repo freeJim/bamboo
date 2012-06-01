@@ -3,7 +3,7 @@
 require 'posix'
 require 'signal'
 require 'bamboo'
-require 'redis'
+require 'hiredis'
 
 local util = require 'bamboo.util'
 local readSettings = util.readSettings
