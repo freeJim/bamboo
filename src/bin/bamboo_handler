@@ -61,7 +61,7 @@ local AUTH = config.AUTH or nil
 -- we will create one redis connection for every process
 BAMBOO_DB = redis.connect(DB_HOST, DB_PORT)
 assert(BAMBOO_DB, '[Error] Database connection is failed.')
-assert(BAMBOO_DB:command("auth",AUTH));
+if AUTH then assert(BAMBOO_DB:command("auth",AUTH)); end
 assert(BAMBOO_DB:command("select",WHICH_DB));
 
 require 'bamboo.util'
