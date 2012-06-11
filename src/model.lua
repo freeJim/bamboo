@@ -144,8 +144,12 @@ local function getIndexKey(self)
 	return getClassName(self) + ':__index'
 end
 
-local function getFieldIndex(self, field)
-	return getClassName(self) .. ":" .. field ':__index'
+local function getFieldIndexKey(self, field)
+	return getClassName(self) .. ":" .. field.. ':__index'
+end
+
+local function getSetIndexKey(self, field, value)
+	return getClassName(self) .. ":" .. field..":".. value .. ':__index'
 end
 
 local function getClassIdPattern(self)
@@ -2922,26 +2926,17 @@ Model = Object:extend {
 		    checkType(field, 'string')
         end
 
-        local oldObj = getById(self.id);
 
-        if field then -- index for field 
-            indexField(self, field, nil, oldObj)
-        else -- index for object
-            for field, indexType in pairs(self.__index) do
-                indexField(self, field, indexType, oldObj);
-            end
-        end
-
-        return true;
-
-        local function indexFieldStrRemove(self, field)
+       local function indexFieldStrRemove(self, field)
             local indexKey = getFieldIndexKey(self,field);
             local id = db:hget(indexKey, self[field]); 
             if id==nil then 
                 --do nothing
             elseif tonumber(id) then--this field only has a id
-                db:hdel(indexKey, self[field]);
-            else -- this field has a id set 
+                if tonumber(id) == tonumber(self.id) then 
+                    db:hdel(indexKey, self[field]);
+                end
+            else --this field has a id set 
                 local indexSetKey = id;
                 db:srem(indexSetKey, self.id);
 
@@ -2954,8 +2949,8 @@ Model = Object:extend {
             end
         end
 
-        local function indexFieldStr(self,filed); --add the new
-            local indexKey = getFieldIndexKey(self);
+        local function indexFieldStr(self,field) --add the new
+            local indexKey = getFieldIndexKey(self,field);
             local id = db:hget(indexKey, self[field]); 
             if id==nil then 
                 db:hset(indexKey, self[field], self.id);
@@ -2970,34 +2965,47 @@ Model = Object:extend {
         end
 
         local function indexField(self, field, indexType, oldObj)
-            indexType = indexType?indexType : self:__index[field];
-
-            if oldObj[field] == value then
+            indexType = indexType or self.__fields[field].indexType;
+            
+            local value = self[field];
+            if oldObj.__fields[field] == self.__fields[field] then
                 return;
             end
             
             if indexType == 'number' then
-                local indexKey = getFieldIndexKey(self);
+                local indexKey = getFieldIndexKey(self,field);
                 db:zadd(indexKey, value, self.id);
             elseif indexType == 'string' then
                 indexFieldStrRemove(oldObj,field);--remove the old
-                indexFieldStr(self,filed); --add the new
+                indexFieldStr(self,field); --add the new
             else
                 
             end
         end
-    end
+
+        local oldObj = self:getClass():getById(self.id);
+
+        if field then -- index for field 
+            indexField(self, field, nil, oldObj)
+        else -- index for object
+            for field, def in pairs(self.__fields) do
+                indexField(self, field, def.indexType, oldObj);
+            end
+        end
+    end;
+
 
     getIdsByIndexHash = function(self,field,value)
 		I_AM_CLASS(self)
             
-        local indexKey = getFieldIndexKey(self);
-        if self:__index[field] == 'number' then 
+        local indexKey = getFieldIndexKey(self,field);
+        if self.__fields[field].indexType== 'number' then 
             value = tonumber(value);
             return db:zrangebyscore(indexKey,value,value)
-        elseif self:__index[field] == 'string' then 
-            local indexKey = getFieldIndexKey(self);
-            local id = db:hget(indexKey, self[field]); 
+        elseif self.__fields[field].indexType == 'string' then 
+            local indexKey = getFieldIndexKey(self,field);
+            local id = db:hget(indexKey, value); 
+            print(id,indexKey,field,value);
             if id == nil then 
                 return List();
             elseif tonumber(id) then
@@ -3005,7 +3013,7 @@ Model = Object:extend {
             else
                 local ids = db:smembers(id);
                 for i=1,#ids do
-                    ids[i] = tonumber(ids[1]);
+                    ids[i] = tonumber(ids[i]);
                 end
                 return ids;
             end

@@ -1,0 +1,71 @@
+#!/usr/bin/env lua  
+redis = require 'hiredis'
+hash = require 'bamboo.script.hash'
+eval = require 'bamboo.script.eval'
+require 'lglib'
+
+
+local DB_HOST = '127.0.0.1'
+local DB_PORT =  6379
+local WHICH_DB = 0
+local AUTH = nil
+-- create a redis connection in this process
+-- we will create one redis connection for every process
+local db = redis.connect(DB_HOST, DB_PORT)
+assert(db, '[Error] Database connection is failed.')
+if AUTH then assert(db:command("auth",AUTH)); end
+assert(db:command("select",WHICH_DB));
+
+
+local Model = require 'bamboo.model'
+local Session = require 'bamboo.session'
+local md5 = require 'md5'
+local socket = require 'socket'
+local Perm = require 'bamboo.models.permission'
+
+
+local Test = Model:extend{
+    __tag = 'Object.Model.Test';
+	__name = 'Test';
+	__desc = 'Basic user definition.';
+	__index = {name = "string" , score = "number"};
+	__fields = {
+		['name'] = { required=true },
+		['score'] = { required=true },
+	};
+
+    init = function (self,t)
+        if not t then return self end;
+
+        self.name = t.name;
+        self.score = t.score;
+    end
+
+}
+
+function testMain()
+    local test1 = Test({name = "xxxx",score = 1.0})
+    local test2 = Test({name = "xxxx",score = 1.1})
+    local test3 = Test({name = "xxxx",score = 1.2})
+    local test4 = Test({name = "xxxx1",score = 2.0})
+    local test5 = Test({name = "xxxx1",score = 2.1})
+    local test6 = Test({name = "xxxx2",score = 3.0})
+    
+
+end
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
