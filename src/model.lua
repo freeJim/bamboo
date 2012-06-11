@@ -144,6 +144,10 @@ local function getIndexKey(self)
 	return getClassName(self) + ':__index'
 end
 
+local function getFieldIndex(self, field)
+	return getClassName(self) .. ":" .. field ':__index'
+end
+
 local function getClassIdPattern(self)
 	return getClassName(self) + self.id
 end
@@ -2909,6 +2913,106 @@ Model = Object:extend {
 		
 	end;
 
+    -- params :
+    -- if field == nil then index all field in __index 
+    indexHash = function(self,field)
+		I_AM_INSTANCE(self)
+		assert(self.id, ("[Error] Must have id field!"))
+        if field then 
+		    checkType(field, 'string')
+        end
+
+        local oldObj = getById(self.id);
+
+        if field then -- index for field 
+            indexField(self, field, nil, oldObj)
+        else -- index for object
+            for field, indexType in pairs(self.__index) do
+                indexField(self, field, indexType, oldObj);
+            end
+        end
+
+        return true;
+
+        local function indexFieldStrRemove(self, field)
+            local indexKey = getFieldIndexKey(self,field);
+            local id = db:hget(indexKey, self[field]); 
+            if id==nil then 
+                --do nothing
+            elseif tonumber(id) then--this field only has a id
+                db:hdel(indexKey, self[field]);
+            else -- this field has a id set 
+                local indexSetKey = id;
+                db:srem(indexSetKey, self.id);
+
+                local num = db:scard(indexSetKey) ;
+                if num == 1 then 
+                    local ids = db:smembers(indexSetKey);
+                    db:del(indexSetKey);
+                    db:hset(indexKey,self[field],ids[1]);
+                end
+            end
+        end
+
+        local function indexFieldStr(self,filed); --add the new
+            local indexKey = getFieldIndexKey(self);
+            local id = db:hget(indexKey, self[field]); 
+            if id==nil then 
+                db:hset(indexKey, self[field], self.id);
+            elseif tonumber(id) then--this field already has a id
+                local indexSetKey = getSetIndexKey(self, field, self[field]);
+                db:sadd(indexSetKey, id);
+                db:sadd(indexSetKey, self.id);
+                db:hset(indexKey, self[field], indexSetKey);
+            else -- this field has a id set, the id is the set name  
+                db:sadd(id, self.id);
+            end
+        end
+
+        local function indexField(self, field, indexType, oldObj)
+            indexType = indexType?indexType : self:__index[field];
+
+            if oldObj[field] == value then
+                return;
+            end
+            
+            if indexType == 'number' then
+                local indexKey = getFieldIndexKey(self);
+                db:zadd(indexKey, value, self.id);
+            elseif indexType == 'string' then
+                indexFieldStrRemove(oldObj,field);--remove the old
+                indexFieldStr(self,filed); --add the new
+            else
+                
+            end
+        end
+    end
+
+    getIdsByIndexHash = function(self,field,value)
+		I_AM_CLASS(self)
+            
+        local indexKey = getFieldIndexKey(self);
+        if self:__index[field] == 'number' then 
+            value = tonumber(value);
+            return db:zrangebyscore(indexKey,value,value)
+        elseif self:__index[field] == 'string' then 
+            local indexKey = getFieldIndexKey(self);
+            local id = db:hget(indexKey, self[field]); 
+            if id == nil then 
+                return List();
+            elseif tonumber(id) then
+                return {tonumber(id)};
+            else
+                local ids = db:smembers(id);
+                for i=1,#ids do
+                    ids[i] = tonumber(ids[1]);
+                end
+                return ids;
+            end
+        else
+            return List();
+        end
+    end
 }
 
 local QuerySetMeta = setProto({__spectype='QuerySet'}, Model)
