@@ -775,7 +775,7 @@ _G['bt'] = function (small, big)
 	small = tonumber(small) or small
 	big = tonumber(big) or big	
 	local t = function (v)
-        if v == nil then return nil, 'bt', small, big; end
+        if v == nil then return nil, 'bt', {small, big}; end
 
 		local nv = tonumber(v) or v
 		if nv and nv > small and nv < big then
@@ -792,7 +792,7 @@ _G['be'] = function (small, big)
 	small = tonumber(small) or small
 	big = tonumber(big) or big	
 	local t = function (v)
-        if v == nil then return nil, 'be', small,big; end
+        if v == nil then return nil, 'be', {small,big}; end
 
 		local nv = tonumber(v) or v
 		if nv and nv >= small and nv <= big then
@@ -809,7 +809,7 @@ _G['outside'] = function (small, big)
 	small = tonumber(small) or small
 	big = tonumber(big) or big	
 	local t = function (v)
-        if v == nil then return nil, 'outside',small,big; end
+        if v == nil then return nil, 'outside',{small,big}; end
 
 		local nv = tonumber(v) or v
 		if nv and nv < small and nv > big then

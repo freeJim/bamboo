@@ -230,10 +230,10 @@ function filterNumber(self,field,name,args)
     if name == 'eq' then-- equal 
         all_ids = filterBtNumber(self,field,args,args);
     elseif name == 'uneq' then --unequal
-        local left = filterBtNumber(self,field,-math.huge,"("..tostring(args));
-        local right = filterBtNumber(self,field,"("..tostring(args),math.huge);
-        all_ids = left;
-        for i,v in ipairs(right) do 
+        local lefts = filterBtNumber(self,field,-math.huge,"("..tostring(args));
+        local rights = filterBtNumber(self,field,"("..tostring(args),math.huge);
+        all_ids = lefts;
+        for i,v in ipairs(rights) do 
             table.insert(all_ids,v);
         end
     elseif name == 'lt' then -- less then
@@ -250,12 +250,20 @@ function filterNumber(self,field,name,args)
         all_ids = filterBtNumber(self,field,args[1],args[2]);
     elseif name == 'outside' then
         all_ids = filterBtNumber(self,field,-math.huge,"("..args[1]);
-        local t = filterBtNumber(self,field,"("..args[1], math.huge);
+        local t = filterBtNumber(self,field,"("..args[2], math.huge);
         for i,v in ipairs(t) do 
             table.insert(all_ids,v);
         end         
     elseif name == 'inset' then
-        all_ids = filterBtNumber(self,field,name,name);
+        for i,v in ipairs(args) do
+            local ids = filterBtNumber(self,field,v,v);
+            for __,id in ipairs(ids) do 
+                table.insert(all_ids, id);
+            end
+	end
+    elseif name == 'uninset' then
+        print("[Warning]  uneq string not surpport");
+        all_ids = {};
     else
     end
 
@@ -291,15 +299,35 @@ function filterString(self,field,name,args)
     elseif name == 'outside' then
         print("[Warning]  outside string not surpport");
         all_ids = {};
+    elseif name == 'contains' then
+        print("[Warning]  contains string not surpport");
+        all_ids = {};
+    elseif name == 'uncontains' then
+        print("[Warning]  uncontains string not surpport");
+        all_ids = {};
+    elseif name == 'startsWith' then
+        print("[Warning]  startsWith string not surpport");
+        all_ids = {};
+    elseif name == 'unstartsWith' then
+        print("[Warning] unstartsWith string not surpport");
+        all_ids = {};
+    elseif name == 'endsWith' then
+        print("[Warning] endsWith string not surpport");
+        all_ids = {};
+    elseif name == 'unendsWith' then
+        print("[Warning] unendsWith string not surpport");
+        all_ids = {};
     elseif name == 'inset' then
         all_ids = {};
         for i,v in ipairs(args) do 
             local t = filterEqString(self,field,v);
-            for i,v in ipairs(t) do 
-                table.insert(all_ids,v);
+            for _,id in ipairs(t) do 
+                table.insert(all_ids,id);
             end
         end
-    else
+    elseif name == 'uninset' then
+        print("[Warning]  outside string not surpport");
+        all_ids = {};
     end
 
     return all_ids;

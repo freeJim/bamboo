@@ -105,7 +105,7 @@ function testMain()
     test3:save();
 
     print("--------------------------");
-    local ids = Test:filter({"and", name="xxxx", score = lt(2.0)})
+    local ids = Test:filter({"or", name="xxxx", score = lt(2.0)})
     print("+++++++++++++");
     ptable(ids);
 end
