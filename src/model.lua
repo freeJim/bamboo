@@ -680,7 +680,9 @@ local upvalue_collector = {}
 
 _G['eq'] = function ( cmp_obj )
 	local t = function (v)
-		if v == cmp_obj then
+        if v == nil then return nil, 'eq', com_obj; end--only return params
+		
+        if v == cmp_obj then
 			return true
 		else
 			return false
@@ -692,6 +694,8 @@ end
 
 _G['uneq'] = function ( cmp_obj )
 	local t = function (v)
+        if v == nil then return nil, 'uneq', com_obj; end
+
 		if v ~= cmp_obj then
 			return true
 		else
@@ -705,6 +709,8 @@ end
 _G['lt'] = function (limitation)
 	limitation = tonumber(limitation) or limitation
 	local t = function (v)
+        if v == nil then return nil, 'lt', limitation; end
+
 		local nv = tonumber(v) or v
 		if nv and nv < limitation then
 			return true
@@ -719,6 +725,8 @@ end
 _G['gt'] = function (limitation)
 	limitation = tonumber(limitation) or limitation
 	local t = function (v)
+        if v == nil then return nil, 'gt', limitation; end
+
 		local nv = tonumber(v) or v
 		if nv and nv > limitation then
 			return true
@@ -734,6 +742,8 @@ end
 _G['le'] = function (limitation)
 	limitation = tonumber(limitation) or limitation
 	local t = function (v)
+        if v == nil then return nil, 'le', limitation; end
+
 		local nv = tonumber(v) or v
 		if nv and nv <= limitation then
 			return true
@@ -748,6 +758,8 @@ end
 _G['ge'] = function (limitation)
 	limitation = tonumber(limitation) or limitation
 	local t = function (v)
+        if v == nil then return nil, 'ge', limitation; end
+
 		local nv = tonumber(v) or v
 		if nv and nv >= limitation then
 			return true
@@ -763,6 +775,8 @@ _G['bt'] = function (small, big)
 	small = tonumber(small) or small
 	big = tonumber(big) or big	
 	local t = function (v)
+        if v == nil then return nil, 'bt', small, big; end
+
 		local nv = tonumber(v) or v
 		if nv and nv > small and nv < big then
 			return true
@@ -778,6 +792,8 @@ _G['be'] = function (small, big)
 	small = tonumber(small) or small
 	big = tonumber(big) or big	
 	local t = function (v)
+        if v == nil then return nil, 'be', small,big; end
+
 		local nv = tonumber(v) or v
 		if nv and nv >= small and nv <= big then
 			return true
@@ -793,6 +809,8 @@ _G['outside'] = function (small, big)
 	small = tonumber(small) or small
 	big = tonumber(big) or big	
 	local t = function (v)
+        if v == nil then return nil, 'outside',small,big; end
+
 		local nv = tonumber(v) or v
 		if nv and nv < small and nv > big then
 			return true
@@ -806,6 +824,8 @@ end
 
 _G['contains'] = function (substr)
 	local t = function (v)
+        if v == nil then return nil, 'contains', substr; end
+
 		v = tostring(v)
 		if v:contains(substr) then 
 			return true
@@ -819,6 +839,8 @@ end
 
 _G['uncontains'] = function (substr)
 	local t = function (v)
+        if v == nil then return nil, 'uncontains', substr; end
+
 		v = tostring(v)
 		if not v:contains(substr) then 
 			return true
@@ -833,6 +855,8 @@ end
 
 _G['startsWith'] = function (substr)
 	local t = function (v)
+        if v == nil then return nil, 'startsWith', substr; end
+
 		v = tostring(v)
 		if v:startsWith(substr) then 
 			return true
@@ -846,6 +870,8 @@ end
 
 _G['unstartsWith'] = function (substr)
 	local t = function (v)
+        if v == nil then return nil, 'unstartsWith', substr; end
+
 		v = tostring(v)
 		if not v:startsWith(substr) then 
 			return true
@@ -860,6 +886,7 @@ end
 
 _G['endsWith'] = function (substr)
 	local t = function (v)
+        if v == nil then return nil, 'endsWith', substr; end
 		v = tostring(v)
 		if v:endsWith(substr) then 
 			return true
@@ -873,6 +900,7 @@ end
 
 _G['unendsWith'] = function (substr)
 	local t = function (v)
+        if v == nil then return nil, 'unendsWith', substr; end
 		v = tostring(v)
 		if not v:endsWith(substr) then 
 			return true
@@ -887,6 +915,7 @@ end
 _G['inset'] = function (...)
 	local args = {...}
 	local t = function (v)
+        if v == nil then return nil, 'inset', args; end
 		v = tostring(v)
 		for _, val in ipairs(args) do
 			-- once meet one, ok
@@ -904,6 +933,7 @@ end
 _G['uninset'] = function (...)
 	local args = {...}
 	local t = function (v)
+        if v == nil then return nil, 'uninset', args; end
 		v = tostring(v)
 		for _, val in ipairs(args) do
 			-- once meet one, false
@@ -1584,17 +1614,18 @@ Model = Object:extend {
 				query_args[1] = nil
 			end
 		end
+
 		
-		local all_ids
+		local all_ids = {}
 		if is_query_set then
 			-- if self is query set, we think of all_ids as object list, rather than id string list
 			all_ids = self
+		    -- nothing in id list, return empty table
+    		if #all_ids == 0 then return List() end
 		else
 			-- all_ids is id string list
-			all_ids = self:allIds()
+			--all_ids = self:allIds()
 		end
-		-- nothing in id list, return empty table
-		if #all_ids == 0 then return List() end
 
 		
 		-- create a query set
@@ -1618,6 +1649,7 @@ Model = Object:extend {
 				--end
 			end
 		end
+
 		
 		--DEBUG('all_ids', all_ids)
 		if is_query_set then
@@ -1625,7 +1657,7 @@ Model = Object:extend {
 			-- objs are already integrated instances
 			walkcheck(objs)			
 		else
-			-- make partially get value containing 'id' default
+		--[[	-- make partially get value containing 'id' default
 			local qfs = {'id'}
 			if is_query_table then
 				for k, _ in pairs(query_args) do
@@ -1655,7 +1687,13 @@ Model = Object:extend {
 				objs = getPartialFromRedisPipeline(self, all_ids, qfs)
 				partially_got = true
 			end
-			walkcheck(objs)			
+			walkcheck(objs)	-]]		
+
+		    -- here, all_ids is the all instance id to query_args now
+            all_ids = mih.filter(self,query_args,logic);
+            for i,v in ipairs(all_ids) do 
+			    tinsert(query_set, v)
+            end
 		end
 		
 		-- here, _t_query_set is the all instance fit to query_args now
@@ -2180,7 +2218,7 @@ Model = Object:extend {
 			-- update object hash store key
 			db:hmset(model_key, unpack(store_kv))
             
-            self:indexHash(true);--create hash index
+            mih.index(self,true);--create hash index
 			end)
 		else
 			-- update case
@@ -2191,7 +2229,7 @@ Model = Object:extend {
 
 			local options = { watch = {index_key}, cas = true, retry = 2 }
 			replies = db:transaction(options, function(db)
-            self:indexHash(false);--update hash index
+            mih.index(self,false);--update hash index
 
 			local score = db:zscore(index_key, self[indexfd])
 			assert(score == self.id or score == nil, "[Error] save duplicate to an unique limited field, aborted!")
@@ -2922,257 +2960,10 @@ Model = Object:extend {
 		
 	end;
 
-    -- params :
-    -- if field == nil then index all field in __index 
-    indexHash = function(self,newIndex,field)
-		I_AM_INSTANCE(self)
-        if field then 
-		    checkType(field, 'string')
-        end
-
-        -- start index
-        if newIndex then 
-            if field then -- index for field 
-                indexType = self.__fields[field].indexType;
-                if indexType then 
-                    mih.indexField(self, field, indexType, nil)
-                end
-            else -- index for object
-                for field, def in pairs(self.__fields) do
-                    if def.indexType then
-                        mih.indexField(self, field, def.indexType, nil);
-                    end
-                end
-            end
-        else
-            local oldObj = self:getClass():getById(self.id);
-    
-            if field then -- index for field 
-                indexType = self.__fields[field].indexType;
-                if indexType then 
-                    mih.indexField(self, field, nil, oldObj)
-                end
-            else -- index for object
-                for field, def in pairs(self.__fields) do
-                    if def.indexType then
-                        mih.indexField(self, field, def.indexType, oldObj);
-                    end
-                end
-            end
-        end
-    end;
 
 
-    getIdsByIndexHash = function(self,field,value)
-		I_AM_CLASS(self)
-            
-        local indexKey = mih.getFieldIndexKey(self,field);
-        if self.__fields[field].indexType== 'number' then 
-            value = tonumber(value);
-            return db:zrangebyscore(indexKey,value,value)
-        elseif self.__fields[field].indexType == 'string' then 
-            local indexKey = mih.getFieldIndexKey(self,field);
-            local id = db:hget(indexKey, value); 
-            if id == nil then 
-                return List();
-            elseif tonumber(id) then
-                return {tonumber(id)};
-            else
-                local ids = db:smembers(id);
-                for i=1,#ids do
-                    ids[i] = tonumber(ids[i]);
-                end
-                return ids;
-            end
-        else
-            return List();
-        end
-    end;--]]
-
-	--- fitler some instances belong to this model
-	-- @param query_args: query arguments in a table
-	-- @param start: specify which index to start slice, note: this is the position after filtering 
-	-- @param stop: specify the end of slice
-	-- @param is_rev: specify the direction of the search result, 'rev'
-	-- @return: query_set, an object list (query set)
-	-- @note: this function can be called by class object and query set
-	filterByIndexHash = function (self, query_args, start, stop, is_rev, is_get)
-		I_AM_CLASS_OR_QUERY_SET(self)
-		assert(type(query_args) == 'table' or type(query_args) == 'function', '[Error] the query_args passed to filter must be table or function.')
-		if start then assert(type(start) == 'number', '[Error] @filter - start must be number.') end
-		if stop then assert(type(stop) == 'number', '[Error] @filter - stop must be number.') end
-		if is_rev then assert(type(is_rev) == 'string', '[Error] @filter - is_rev must be string.') end
-		
-		local is_query_set = false
-		if isQuerySet(self) then is_query_set = true end
-		local is_query_table = (type(query_args) == 'table')
-		local logic = 'and'
-		
-		local query_str_iden
-		local is_using_rule_index = isUsingRuleIndex(self)
-		if is_using_rule_index then
-			if type(query_args) == 'function' then
-				collectRuleFunctionUpvalues(query_args)
-			                                   
-			end
-			-- make query identification string
-			query_str_iden = compressQueryArgs(query_args)
-
-			-- check index
-			-- XXX: Only support class now, don't support query set, maybe query set doesn't need this feature
-			local id_list = getIndexFromManager(self, query_str_iden)
-			if #id_list > 0 then
-				if is_get == 'get' then
-					id_list = (is_rev == 'rev') and List{id_list[#id_list]} or List{id_list[1]}
-				else	
-					-- now id_list is a list containing all id of instances fit to this query_args rule, so need to slice
-					id_list = id_list:slice(start, stop, is_rev)
-				end
-				
-				-- if have this list, return objects directly
-				if #id_list > 0 then
-					return getFromRedisPipeline(self, id_list)
-				end
-			end
-			-- else go ahead
-		end
-		
-		if is_query_table then
-			if query_args and query_args['id'] then
-				-- remove 'id' query argument
-				print("[Warning] Filter doesn't support search by id.")
-				query_args['id'] = nil 
-			end
-
-			-- if query table is empty, return slice instances
-			if isFalse(query_args) then 
-				local start = start or 1
-				local stop = stop or -1
-				local nums = self:numbers()
-				return self:slice(start, stop, is_rev)
-			end
-
-			-- normalize the 'and' and 'or' logic
-			if query_args[1] then
-				assert(query_args[1] == 'or' or query_args[1] == 'and', 
-					"[Error] The logic should be 'and' or 'or', rather than: " .. tostring(query_args[1]))
-				if query_args[1] == 'or' then
-					logic = 'or'
-				end
-				query_args[1] = nil
-			end
-		end
-		
-		local all_ids
-		if is_query_set then
-			-- if self is query set, we think of all_ids as object list, rather than id string list
-			all_ids = self
-		else
-			-- all_ids is id string list
-			all_ids = self:allIds()
-		end
-		-- nothing in id list, return empty table
-		if #all_ids == 0 then return List() end
-
-		
-		-- create a query set
-		local query_set = QuerySet()
-		local logic_choice = (logic == 'and')
-		local partially_got = false
-
-		-- walkcheck can process full object and partial object
-		local walkcheck = function (objs)
-			for i = 1, #all_ids do
-				local obj = objs[i]
-				--DEBUG(obj)
-				-- check the object's legalery, only act on valid object
-				--if isValidInstance(obj) then
-				local flag = checkLogicRelation(self, obj, query_args, logic_choice)
-				
-				-- if walk to this line, means find one 
-				if flag then
-					tinsert(query_set, obj)
-				end
-				--end
-			end
-		end
-		
-		--DEBUG('all_ids', all_ids)
-		if is_query_set then
-			local objs = all_ids
-			-- objs are already integrated instances
-			walkcheck(objs)			
-		else
-			-- make partially get value containing 'id' default
-			local qfs = {'id'}
-			if is_query_table then
-				for k, _ in pairs(query_args) do
-					tinsert(qfs, k)
-				end
-			else
-				-- use precollected fields
-				-- if model has set '__use_rule_index' manually, collect all fields to index
-				-- if not set '__use_rule_index' manually, collect fields with 'index=true' in their field description table
-				-- if not set '__use_rule_index' manually, and not set 'index=true' in any field, collect NOTHING
-				--DEBUG('__rule_index_fields', self.__rule_index_fields)
-				for _, k in ipairs(self.__rule_index_fields) do
-					tinsert(qfs, k)
-				end
-			end
-			table.sort(qfs)
-			local objs
-			--DEBUG(qfs)
-			-- == 1, means only have 'id', collect nothing on fields 
-			if #qfs == 1 then
-				--DEBUG('Enter full pipeline branch')
-				-- collect nothing, use 'hgetall' to retrieve, partially_got is false
-				objs = getFromRedisPipeline(self, all_ids)
-			else
-				--DEBUG('Enter partial pipeline branch')
-				-- use hmget to retrieve, now the objs are partial objects
-				objs = getPartialFromRedisPipeline(self, all_ids, qfs)
-				partially_got = true
-			end
-			walkcheck(objs)			
-		end
-		
-		-- here, _t_query_set is the all instance fit to query_args now
-		local _t_query_set = query_set
-		if #query_set == 0 then return query_set end
-		
-		if is_get == 'get' then
-			query_set = (is_rev == 'rev') and List {_t_query_set[#_t_query_set]} or List {_t_query_set[1]}
-		else	
-			-- now id_list is a list containing all id of instances fit to this query_args rule, so need to slice
-			query_set = _t_query_set:slice(start, stop, is_rev)
-		end
-
-		-- if self is query set, its' element is always integrated
-		-- if call by class
-		if not is_query_set and #_t_query_set > 0 then
-			-- retrieve all objects' id
-			local id_list = {}
-			for _, v in ipairs(_t_query_set) do
-				tinsert(id_list, v.id)
-			end
-			-- add to index, here, we index all instances fit to query_args, rather than results applied extra limitation conditions
-			if is_using_rule_index then
-				addIndexToManager(self, query_str_iden, id_list)
-			end
-			
-			-- if partially got previously, need to get the integrated objects now
-			if partially_got then
-				id_list = {}
-				-- retrieve needed objects' id
-				for _, v in ipairs(query_set) do
-					tinsert(id_list, v.id)
-				end
-				query_set = getFromRedisPipeline(self, id_list)
-			end
-		end
-
-		return query_set
-	end;
+   --indexHash = mih.index;
+   --filterByIndexHash = mih.filter;
 }
 
 local QuerySetMeta = setProto({__spectype='QuerySet'}, Model)

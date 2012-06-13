@@ -97,28 +97,6 @@ function testMain()
     test5:save(); print("test5",test5.id);
     test6:save(); print("test6",test6.id);
    
-    print("filter name xxxx2")
-    local ids = Test:getIdsByIndexHash("name","xxxx2");
-    for i,v in ipairs(ids) do
-        local obj = Test:getById(v);
-        print(obj.id, obj.name, obj.score);
-    end
-
-    print("filter name xxxx1")
-    local ids = Test:getIdsByIndexHash("name","xxxx1");
-    for i,v in ipairs(ids) do
-        local obj = Test:getById(v);
-        print(obj.id, obj.name, obj.score);
-    end
-
-    print("filter name xxxx")
-    local ids = Test:getIdsByIndexHash("name","xxxx");
-    for i,v in ipairs(ids) do
-        local obj = Test:getById(v);
-        print(obj.id, obj.name, obj.score);
-    end
-
-
     test1.name = "xxxx2";
     test1:save();
     test2.name = "xxxx2";
@@ -126,24 +104,10 @@ function testMain()
     test3.name = "xxxx2";
     test3:save();
 
-    print("filter name xxxx")
-    local ids = Test:getIdsByIndexHash("name","xxxx");
-    for i,v in ipairs(ids) do
-        local obj = Test:getById(v);
-        print(obj.id, obj.name, obj.score);
-    end
-    print("filter name xxxx1")
-    local ids = Test:getIdsByIndexHash("name","xxxx1");
-    for i,v in ipairs(ids) do
-        local obj = Test:getById(v);
-        print(obj.id, obj.name, obj.score);
-    end
-    print("filter name xxxx2")
-    local ids = Test:getIdsByIndexHash("name","xxxx2");
-    for i,v in ipairs(ids) do
-        local obj = Test:getById(v);
-        print(obj.id, obj.name, obj.score);
-    end
+    print("--------------------------");
+    local ids = Test:filter({"and", name="xxxx", score = lt(2.0)})
+    print("+++++++++++++");
+    ptable(ids);
 end
 
 
