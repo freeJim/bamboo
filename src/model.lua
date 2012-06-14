@@ -680,7 +680,7 @@ local upvalue_collector = {}
 
 _G['eq'] = function ( cmp_obj )
 	local t = function (v)
-        if v == nil then return nil, 'eq', com_obj; end--only return params
+        if v == nil then return nil, 'eq', cmp_obj; end--only return params
 		
         if v == cmp_obj then
 			return true
@@ -694,7 +694,7 @@ end
 
 _G['uneq'] = function ( cmp_obj )
 	local t = function (v)
-        if v == nil then return nil, 'uneq', com_obj; end
+        if v == nil then return nil, 'uneq', cmp_obj; end
 
 		if v ~= cmp_obj then
 			return true
@@ -1690,6 +1690,7 @@ Model = Object:extend {
 			walkcheck(objs)	-]]		
 
 		    -- here, all_ids is the all instance id to query_args now
+            --query_set = QuerySet(mih.filter(self,query_args,logic));
             all_ids = mih.filter(self,query_args,logic);
             for i,v in ipairs(all_ids) do 
 			    tinsert(query_set, v)

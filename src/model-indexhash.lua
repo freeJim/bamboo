@@ -15,20 +15,38 @@ local function getIndexKey(self)
 	return getClassName(self) + ':__index'
 end
 
-function getFieldIndexKey(self, field)
-	return getClassName(self) .. ":" .. field.. ':__index'
+function getFieldHashKey(self, field)
+	return getClassName(self) .. ":" .. field.. ':__hash'
 end
 
+--function getFieldZSetKey(self,field)
+--    return getClassName(self)..":"..field..":__zset";
+--end
 
-function getSetIndexKey(self, field, value)
-	return getClassName(self) .. ":" .. field..":".. value .. ':__index'
+
+function getFieldValSetKey(self, field, value)
+	return getClassName(self) .. ":" .. field..":".. value .. ':__set'
 end
 
+function getAllIds(self)
+    local indexKey = getIndexKey(self);
+    return db:zrange(indexKey, 0,-1);
+end
+
+--[[function getFieldZSet(self,sKey,eKey)
+    local indexKey = getFieldZSetKey(self);
+    return db:zrange(indexKey,0,-1);
+end]]
+
+function getFieldHashFields(self,field)
+    local indexKey = getFieldHashKey(self,field);
+    return db:hkeys(indexKey);
+end
 
 ---------------------------make index ------------
 --remove the string index of the field of the object
 function indexFieldStrRemove(self, field)
-    local indexKey = getFieldIndexKey(self,field);
+    local indexKey = getFieldHashKey(self,field);
     local id = db:hget(indexKey, self[field]); 
     if id==nil then 
         --do nothing
@@ -51,12 +69,12 @@ end
 
 --create the string index of the field of the object
 function indexFieldStr(self,field) --add the new
-    local indexKey = getFieldIndexKey(self,field);
+    local indexKey = getFieldHashKey(self,field);
     local id = db:hget(indexKey, self[field]); 
     if id==nil then 
         db:hset(indexKey, self[field], self.id);
     elseif tonumber(id) then--this field already has a id
-        local indexSetKey = getSetIndexKey(self, field, self[field]);
+        local indexSetKey = getFieldValSetKey(self, field, self[field]);
         db:sadd(indexSetKey, id);
         db:sadd(indexSetKey, self.id);
         db:hset(indexKey, self[field], indexSetKey);
@@ -73,7 +91,7 @@ function indexField(self, field, indexType, oldObj)
     end
     
     if indexType == 'number' then
-        local indexKey = getFieldIndexKey(self,field);
+        local indexKey = getFieldHashKey(self,field);
         db:zadd(indexKey, value, self.id);
     elseif indexType == 'string' then
         if oldObj then
@@ -207,7 +225,7 @@ function filterQuerySet(self, query_args, start, stop, is_rev, is_get)
 end
 --]]
 function filterEqString(self, field, value)
-    local indexKey = getFieldIndexKey(self,field);
+    local indexKey = getFieldHashKey(self,field);
     local id = db:hget(indexKey, value); 
     if id == nil then 
         return List();
@@ -220,9 +238,10 @@ function filterEqString(self, field, value)
 end
 
 function filterBtNumber(self,field,min,max)
-    local indexKey = getFieldIndexKey(self,field);
+    local indexKey = getFieldHashKey(self,field);
     return db:zrangebyscore(indexKey,min,max)
 end
+
 
 function filterNumber(self,field,name,args)
     local all_ids = {};
@@ -260,10 +279,19 @@ function filterNumber(self,field,name,args)
             for __,id in ipairs(ids) do 
                 table.insert(all_ids, id);
             end
-	end
+	    end
     elseif name == 'uninset' then
-        print("[Warning]  uneq string not surpport");
-        all_ids = {};
+        local all = Set(getAllIds(self));
+        for i,v in ipairs(args) do
+            local ids = filterBtNumber(self,field,v,v);
+            for __,id in ipairs(ids) do 
+                all[id] = nil;
+            end
+	    end
+
+        for k,v in pairs(all) do 
+            table.insert(all_ids,k)
+        end
     else
     end
 
@@ -276,49 +304,179 @@ function filterString(self,field,name,args)
     if name == 'eq' then-- equal 
         all_ids = filterEqString(self,field,args);
     elseif name == 'uneq' then --unequal
-        print("[Warning]  uneq string not surpport");
-        all_ids = {};
+        local all = Set(getAllIds(self));
+        for i,v in ipairs(args) do
+            local ids = filterEqString(self,field,args);
+            for __,id in ipairs(ids) do 
+                all[id] = nil;
+            end
+	    end
+
+        for k,v in pairs(all) do 
+            table.insert(all_ids,k)
+        end
     elseif name == 'lt' then -- less then
-        print("[Warning]  lt string not surpport");
-        all_ids = {};
+        local keys = getFieldHashFields(self);
+        for i,key in pairs(keys) do 
+            if key<args then
+                local ids = filterEqString(self,field,key);
+                for _,id in ipairs(ids) do
+                    table.insert(all_ids,id);
+                end
+            else
+                --break;
+            end
+        end
     elseif name == 'gt' then -- great then
-        print("[Warning]  gt string not surpport");
-        all_ids = {};
+        local keys = getFieldHashFields(self);
+        for i=#keys,1,-1 do 
+            if keys[i]>args then
+                local ids = filterEqString(self,field,keys[i]);
+                for _,id in ipairs(ids) do
+                    table.insert(all_ids,id);
+                end
+            else
+                --break;
+            end
+        end
     elseif name == 'le' then -- less and equal then
-        print("[Warning]  le string not surpport");
-        all_ids = {};
+        local keys = getFieldHashFields(self);
+        for i,key in pairs(keys) do 
+            if key<=args then
+                local ids = filterEqString(self,field,key);
+                for _,id in ipairs(ids) do
+                    table.insert(all_ids,id);
+                end
+            else
+                --break;
+            end
+        end
     elseif name == 'ge' then -- great and equal then
-        print("[Warning]  ge string not surpport");
-        all_ids = {};
+        local keys = getFieldHashFields(self);
+        for i=#keys,1,-1 do 
+            if keys[i]<=args then
+                local ids = filterEqString(self,field,keys[i]);
+                for _,id in ipairs(ids) do
+                    table.insert(all_ids,id);
+                end
+            else
+                --break;
+            end
+        end
     elseif name == 'bt' then  -- between 
-        print("[Warning]  bt string not surpport");
-        all_ids = {};
+        local keys = getFieldHashFields(self);
+        for i,key in pairs(keys) do 
+            if key<args[2] and key >args[1] then
+                local ids = filterEqString(self,field,key);
+                for _,id in ipairs(ids) do
+                    table.insert(all_ids,id);
+                end
+            elseif key >= args[2] then
+                --break;
+            else
+            end
+        end
     elseif name == 'be' then  -- between and equal
-        print("[Warning]  be string not surpport");
-        all_ids = {};
+        local keys = getFieldHashFields(self);
+        for i,key in pairs(keys) do 
+            if key<=args[2] and key >=args[1] then
+                local ids = filterEqString(self,field,key);
+                for _,id in ipairs(ids) do
+                    table.insert(all_ids,id);
+                end
+            elseif key>args[2] then
+                --break;
+            else
+            end
+        end
     elseif name == 'outside' then
-        print("[Warning]  outside string not surpport");
-        all_ids = {};
+        local keys = getFieldHashFields(self);
+        for i,key in pairs(keys) do 
+            if key<args[1] or key>args[2] then
+                local ids = filterEqString(self,field,key);
+                for _,id in ipairs(ids) do
+                    table.insert(all_ids,id);
+                end
+            else
+                --break;
+            end
+        end
+
+--[[        for i=#keys,1,-1 do 
+            if keys[i] > args then 
+                local ids = filterEqString(self,field,keys[i]);
+                for _,id in ipairs(ids) do
+                    table.insert(all_ids,id);
+                end
+            else
+                break;
+            end]
+        end--]]
     elseif name == 'contains' then
-        print("[Warning]  contains string not surpport");
-        all_ids = {};
+        local keys = getFieldHashFields(self);
+        for i,key in pairs(keys) do 
+            if string.find(key<args) then
+                local ids = filterEqString(self,field,key);
+                for _,id in ipairs(ids) do
+                    table.insert(all_ids,id);
+                end
+            end
+        end
     elseif name == 'uncontains' then
-        print("[Warning]  uncontains string not surpport");
-        all_ids = {};
+        local keys = getFieldHashFields(self);
+        for i,key in pairs(keys) do 
+            if not string.find(key,args) then
+                local ids = filterEqString(self,field,key);
+                for _,id in ipairs(ids) do
+                    table.insert(all_ids,id);
+                end
+            end
+        end
     elseif name == 'startsWith' then
-        print("[Warning]  startsWith string not surpport");
-        all_ids = {};
+        local keys = getFieldHashFields(self);
+        for i,key in pairs(keys) do 
+            local start = string.find(key,args);
+            if start and start == 1 then
+                local ids = filterEqString(self,field,key);
+                for _,id in ipairs(ids) do
+                    table.insert(all_ids,id);
+                end
+            end
+        end
     elseif name == 'unstartsWith' then
-        print("[Warning] unstartsWith string not surpport");
-        all_ids = {};
+        local keys = getFieldHashFields(self);
+        for i,key in pairs(keys) do 
+            local start = string.find(key,args);
+            if start and start >1 then 
+                local ids = filterEqString(self,field,key);
+                for _,id in ipairs(ids) do
+                    table.insert(all_ids,id);
+                end
+            end
+        end
     elseif name == 'endsWith' then
-        print("[Warning] endsWith string not surpport");
-        all_ids = {};
+        local keys = getFieldHashFields(self);
+        for i,key in pairs(keys) do 
+            local _,ends = string.find(key,args);
+            if ends and ends == string.len(key) then
+                local ids = filterEqString(self,field,key);
+                for _,id in ipairs(ids) do
+                    table.insert(all_ids,id);
+                end
+            end
+        end
     elseif name == 'unendsWith' then
-        print("[Warning] unendsWith string not surpport");
-        all_ids = {};
+        local keys = getFieldHashFields(self);
+        for i,key in pairs(keys) do 
+            local _,ends = string.find(key,args);
+            if ends and ends<string.len(key) then
+                local ids = filterEqString(self,field,args);
+                for _,id in ipairs(ids) do
+                    table.insert(all_ids,id);
+                end
+            end
+        end
     elseif name == 'inset' then
-        all_ids = {};
         for i,v in ipairs(args) do 
             local t = filterEqString(self,field,v);
             for _,id in ipairs(t) do 
@@ -326,8 +484,17 @@ function filterString(self,field,name,args)
             end
         end
     elseif name == 'uninset' then
-        print("[Warning]  outside string not surpport");
-        all_ids = {};
+        local all = Set(getAllIds(self));
+        for i,v in ipairs(args) do 
+            local t = filterEqString(self,field,v);
+            for _,id in ipairs(t) do 
+                table.insert(all_ids,id);
+            end
+        end
+
+        for k,v in pairs(all) do 
+            table.insert(all_ids,k)
+        end
     end
 
     return all_ids;
