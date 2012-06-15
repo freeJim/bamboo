@@ -1690,11 +1690,11 @@ Model = Object:extend {
 			walkcheck(objs)	-]]		
 
 		    -- here, all_ids is the all instance id to query_args now
-            --query_set = QuerySet(mih.filter(self,query_args,logic));
-            all_ids = mih.filter(self,query_args,logic);
-            for i,v in ipairs(all_ids) do 
-			    tinsert(query_set, v)
-            end
+            query_set = QuerySet(mih.filter(self,query_args,logic));
+            --all_ids = mih.filter(self,query_args,logic);
+            --for i,v in ipairs(all_ids) do 
+			--    tinsert(query_set, v)
+            --end
 		end
 		
 		-- here, _t_query_set is the all instance fit to query_args now
@@ -2969,7 +2969,7 @@ Model = Object:extend {
 
 local QuerySetMeta = setProto({__spectype='QuerySet'}, Model)
 QuerySet = function (list)
-	local list = list or List()
+	local list = List(list)
 	-- create a query set	
 	-- add it to fit the check of isClass function
 --	if not getmetatable(QuerySetMeta) then

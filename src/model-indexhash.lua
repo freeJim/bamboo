@@ -19,9 +19,9 @@ function getFieldHashKey(self, field)
 	return getClassName(self) .. ":" .. field.. ':__hash'
 end
 
---function getFieldZSetKey(self,field)
---    return getClassName(self)..":"..field..":__zset";
---end
+function getFieldZSetKey(self,field)
+    return getClassName(self)..":"..field..":__zset";
+end
 
 
 function getFieldValSetKey(self, field, value)
@@ -91,7 +91,7 @@ function indexField(self, field, indexType, oldObj)
     end
     
     if indexType == 'number' then
-        local indexKey = getFieldHashKey(self,field);
+        local indexKey = getFieldZSetKey(self,field);
         db:zadd(indexKey, value, self.id);
     elseif indexType == 'string' then
         if oldObj then
@@ -223,6 +223,7 @@ function filterQuerySet(self, query_args, start, stop, is_rev, is_get)
 
 	return query_set
 end
+        ptable(all_ids)
 --]]
 function filterEqString(self, field, value)
     local indexKey = getFieldHashKey(self,field);
@@ -238,7 +239,7 @@ function filterEqString(self, field, value)
 end
 
 function filterBtNumber(self,field,min,max)
-    local indexKey = getFieldHashKey(self,field);
+    local indexKey = getFieldZSetKey(self,field);
     return db:zrangebyscore(indexKey,min,max)
 end
 
@@ -299,24 +300,22 @@ function filterNumber(self,field,name,args)
 end
 
 function filterString(self,field,name,args)
-    local all_ads = {};
+    local all_ids = {};
 
     if name == 'eq' then-- equal 
         all_ids = filterEqString(self,field,args);
     elseif name == 'uneq' then --unequal
         local all = Set(getAllIds(self));
-        for i,v in ipairs(args) do
-            local ids = filterEqString(self,field,args);
-            for __,id in ipairs(ids) do 
-                all[id] = nil;
-            end
-	    end
+        local ids = filterEqString(self,field,args);
+        for __,id in ipairs(ids) do 
+            all[id] = nil;
+        end
 
         for k,v in pairs(all) do 
             table.insert(all_ids,k)
         end
     elseif name == 'lt' then -- less then
-        local keys = getFieldHashFields(self);
+        local keys = getFieldHashFields(self,field);
         for i,key in pairs(keys) do 
             if key<args then
                 local ids = filterEqString(self,field,key);
@@ -328,7 +327,7 @@ function filterString(self,field,name,args)
             end
         end
     elseif name == 'gt' then -- great then
-        local keys = getFieldHashFields(self);
+        local keys = getFieldHashFields(self,field);
         for i=#keys,1,-1 do 
             if keys[i]>args then
                 local ids = filterEqString(self,field,keys[i]);
@@ -340,7 +339,7 @@ function filterString(self,field,name,args)
             end
         end
     elseif name == 'le' then -- less and equal then
-        local keys = getFieldHashFields(self);
+        local keys = getFieldHashFields(self,field);
         for i,key in pairs(keys) do 
             if key<=args then
                 local ids = filterEqString(self,field,key);
@@ -352,9 +351,9 @@ function filterString(self,field,name,args)
             end
         end
     elseif name == 'ge' then -- great and equal then
-        local keys = getFieldHashFields(self);
+        local keys = getFieldHashFields(self,field);
         for i=#keys,1,-1 do 
-            if keys[i]<=args then
+            if keys[i]>=args then
                 local ids = filterEqString(self,field,keys[i]);
                 for _,id in ipairs(ids) do
                     table.insert(all_ids,id);
@@ -364,7 +363,7 @@ function filterString(self,field,name,args)
             end
         end
     elseif name == 'bt' then  -- between 
-        local keys = getFieldHashFields(self);
+        local keys = getFieldHashFields(self,field);
         for i,key in pairs(keys) do 
             if key<args[2] and key >args[1] then
                 local ids = filterEqString(self,field,key);
@@ -377,7 +376,7 @@ function filterString(self,field,name,args)
             end
         end
     elseif name == 'be' then  -- between and equal
-        local keys = getFieldHashFields(self);
+        local keys = getFieldHashFields(self,field);
         for i,key in pairs(keys) do 
             if key<=args[2] and key >=args[1] then
                 local ids = filterEqString(self,field,key);
@@ -390,7 +389,7 @@ function filterString(self,field,name,args)
             end
         end
     elseif name == 'outside' then
-        local keys = getFieldHashFields(self);
+        local keys = getFieldHashFields(self,field);
         for i,key in pairs(keys) do 
             if key<args[1] or key>args[2] then
                 local ids = filterEqString(self,field,key);
@@ -413,9 +412,9 @@ function filterString(self,field,name,args)
             end]
         end--]]
     elseif name == 'contains' then
-        local keys = getFieldHashFields(self);
+        local keys = getFieldHashFields(self,field);
         for i,key in pairs(keys) do 
-            if string.find(key<args) then
+            if string.find(key,args) then
                 local ids = filterEqString(self,field,key);
                 for _,id in ipairs(ids) do
                     table.insert(all_ids,id);
@@ -423,7 +422,7 @@ function filterString(self,field,name,args)
             end
         end
     elseif name == 'uncontains' then
-        local keys = getFieldHashFields(self);
+        local keys = getFieldHashFields(self,field);
         for i,key in pairs(keys) do 
             if not string.find(key,args) then
                 local ids = filterEqString(self,field,key);
@@ -433,7 +432,7 @@ function filterString(self,field,name,args)
             end
         end
     elseif name == 'startsWith' then
-        local keys = getFieldHashFields(self);
+        local keys = getFieldHashFields(self,field);
         for i,key in pairs(keys) do 
             local start = string.find(key,args);
             if start and start == 1 then
@@ -444,10 +443,10 @@ function filterString(self,field,name,args)
             end
         end
     elseif name == 'unstartsWith' then
-        local keys = getFieldHashFields(self);
+        local keys = getFieldHashFields(self,field);
         for i,key in pairs(keys) do 
             local start = string.find(key,args);
-            if start and start >1 then 
+            if (not start) or(  start >1) then 
                 local ids = filterEqString(self,field,key);
                 for _,id in ipairs(ids) do
                     table.insert(all_ids,id);
@@ -455,7 +454,7 @@ function filterString(self,field,name,args)
             end
         end
     elseif name == 'endsWith' then
-        local keys = getFieldHashFields(self);
+        local keys = getFieldHashFields(self,field);
         for i,key in pairs(keys) do 
             local _,ends = string.find(key,args);
             if ends and ends == string.len(key) then
@@ -466,11 +465,11 @@ function filterString(self,field,name,args)
             end
         end
     elseif name == 'unendsWith' then
-        local keys = getFieldHashFields(self);
+        local keys = getFieldHashFields(self,field);
         for i,key in pairs(keys) do 
             local _,ends = string.find(key,args);
-            if ends and ends<string.len(key) then
-                local ids = filterEqString(self,field,args);
+            if (not ends) or ( ends<string.len(key)) then
+                local ids = filterEqString(self,field,key);
                 for _,id in ipairs(ids) do
                     table.insert(all_ids,id);
                 end
@@ -488,7 +487,7 @@ function filterString(self,field,name,args)
         for i,v in ipairs(args) do 
             local t = filterEqString(self,field,v);
             for _,id in ipairs(t) do 
-                table.insert(all_ids,id);
+                all[id] = nil;
             end
         end
 
@@ -581,7 +580,7 @@ function filter(self, query_args, logic)
                 end
             else 
                 if self.__fields[field].indexType == 'number' then 
-                    all_ids[i] = filterEqNumber(self,field,value);
+                    all_ids[i] = filterBtNumber(self,field,value,value);
                 elseif self.__fields[field].indexType == 'string' then 
                     all_ids[i] = filterEqString(self,field,value);
                 else
