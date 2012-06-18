@@ -1566,7 +1566,7 @@ Model = Object:extend {
 		if isQuerySet(self) then is_query_set = true end
 		local is_query_table = (type(query_args) == 'table')
 		local logic = 'and'
-		
+
 		local query_str_iden
 		local is_using_rule_index = isUsingRuleIndex(self)
 		if is_using_rule_index then
@@ -1742,8 +1742,9 @@ Model = Object:extend {
 			-- retrieve all objects' id
 			local id_list = {}
 			for _, v in ipairs(_t_query_set) do
-				tinsert(id_list, v.id)
+				tinsert(id_list, v.id or v) --when query set come from hash index pure ,the v is the id
 			end
+
 			-- add to index, here, we index all instances fit to query_args, rather than results applied extra limitation conditions
 			if is_using_rule_index then
 				addIndexToManager(self, query_str_iden, id_list)
