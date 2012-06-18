@@ -390,6 +390,9 @@ local delFromRedis = function (self, id)
 	assert(self.id or id, '[Error] @delFromRedis - must specify an id of instance.')
 	local model_key = id and getNameIdPattern2(self, id) or getNameIdPattern(self)
 	local index_key = getIndexKey(self)
+
+    --del hash index 
+    mih.indexDel(self);
 	
 	local fields = self.__fields
 	-- in redis, delete the associated foreign key-value store
@@ -425,6 +428,9 @@ local fakedelFromRedis = function (self, id)
 	assert(self.id or id, '[Error] @fakedelFromRedis - must specify an id of instance.')
 	local model_key = id and getNameIdPattern2(self, id) or getNameIdPattern(self)
 	local index_key = getIndexKey(self)
+
+    --del hash index 
+    mih.indexDel(self);
 	
 	local fields = self.__fields
 	-- in redis, delete the associated foreign key-value store
@@ -486,6 +492,8 @@ local restoreFakeDeletedInstance = function (self, id)
 	db:zadd(index_key, instance.id, instance.id)
 	-- remove from deleted collector
 	db:zrem(dcollector, model_key)
+
+    mih.index(instance,true);--create hash index
 
 	return instance
 end
@@ -2271,30 +2279,31 @@ Model = Object:extend {
 
 		local indexfd = self.__indexfd
 
-		
+        --old indexfd 
+        -- apply to db
+	    -- if field is indexed, need to update the __index too
+		if field == indexfd then
+		    assert(new_value ~= nil, "[Error] Can not delete indexfd field");
+        	local index_key = getIndexKey(self)
+	    	db:zremrangebyscore(index_key, self.id, self.id)
+		   	db:zadd(index_key, self.id, new_value)
+	    end
+        
+		-- update the lua object
+		self[field] = new_value
+        --hash index
+        mih.index(self,false,field);
+
+        --update object in database
 		if new_value == nil then
-		    -- could not delete index field
-			if field ~= indexfd then
-				db:hdel(model_key, field)
-			end
+			db:hdel(model_key, field)
 		else
-		    -- apply to db
-			-- if field is indexed, need to update the __index too
-			if field == indexfd then
-				local index_key = getIndexKey(self)
-				db:zremrangebyscore(index_key, self.id, self.id)
-				db:zadd(index_key, self.id, new_value)
-			end
-			
 		    db:hset(model_key, field, new_value)
 		end
 		-- update the lastmodified_time
 		self.lastmodified_time = socket.gettime()
 		db:hset(model_key, 'lastmodified_time', self.lastmodified_time)
 	    
-		-- apply to lua object
-		self[field] = new_value
-		
 		-- if fulltext index
 		if fld.fulltext_index and isUsingFulltextIndex(self) then
 			makeFulltextIndexes(self)

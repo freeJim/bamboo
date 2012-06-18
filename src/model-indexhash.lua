@@ -97,7 +97,10 @@ function indexField(self, field, indexType, oldObj)
         if oldObj then
             indexFieldStrRemove(oldObj,field);--remove the old
         end
-        indexFieldStr(self,field); --add the new
+
+        if self[field] then 
+            indexFieldStr(self,field); --add the new
+        end
     else                
     end
 end
@@ -107,10 +110,7 @@ end
 -- if update, must be called before save() and the newIndex must be false
 -- NOTE: 1.the application developer should not call this function, becuase 
 --       it autolly be called in the Model:save(), Model:del(), and so on.      
---       2.the value argment is usefull when the newIndex equal false and 
---         field argment not equal nil. Add it for the Model:update() only, so
---         field and value must not be table.
-function index(self,newIndex,field,value)
+function index(self,newIndex,field)
 	I_AM_INSTANCE(self)
     if field then 
 	    checkType(field, 'string')
@@ -124,18 +124,19 @@ function index(self,newIndex,field,value)
             if indexType then 
                 indexField(self, field, indexType, nil)
             end
-        else -- index for object]]
+        else--]] -- index for object
             for field, def in pairs(self.__fields) do
                 if def.indexType then
                     indexField(self, field, def.indexType, nil);
                 end
             end
---        end
+--      end
     else
         if field then -- index for field 
+            local oldObj = self:getClass():getById(self.id);
             indexType = self.__fields[field].indexType;
             if indexType then 
-                indexField(self, field, indexType, value)
+                indexField(self, field, indexType, oldObj)
             end
         else -- index for object
             local oldObj = self:getClass():getById(self.id);
@@ -147,6 +148,24 @@ function index(self,newIndex,field,value)
         end
     end
 end;
+
+--index  field del 
+function indexFieldDel(self, field, indexType)
+    if indexType == 'number' then
+        local indexKey = getFieldZSetKey(self,field);
+        db:zrem(indexKey, self.id);
+    elseif indexType == 'string' then
+        indexFieldStrRemove(self,field);--remove the old
+    else                
+    end
+end
+function indexDel(self)
+    for field, def in pairs(self.__fields) do
+        if def.indexType then
+            indexFieldDel(self, field, def.indexType);
+        end
+    end
+end
 
 ---------------- use index ---------------------------
 --[[function filterQueryArgs(self,query_args)

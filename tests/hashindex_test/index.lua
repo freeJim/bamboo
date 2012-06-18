@@ -783,7 +783,170 @@ function testMain()
     local ids = Set(ids);
     assert(ids['7'], "test string "and" failed");
     print("logic 'and' PASSED");
+    
+
+    --for update 
+    --test number eq
+    test1:update("score", 2.0);
+    test3:update("score", 1.1);
+    test5:update("score", 0.1);
+
+    ids = Test:filter({score = eq(1.1)})
+    assert(#ids == 2, "test number eq failed");
+    ids = Set(ids);
+    assert(ids['2'], "test number eq failed");
+    assert(ids['3'], "test number eq failed");
+    ids = Test:filter({score = eq(2.0)})
+    assert(#ids == 3, "test number eq failed");
+    ids = Set(ids);
+    assert(ids['1'], "test number eq failed");
+    assert(ids['4'], "test number eq failed");
+    assert(ids['7'], "test number eq failed");
+    ids = Test:filter({score = eq(1)})
+    assert(#ids == 0, "test number eq failed");
+    ids = Set(ids);
+    ids = Test:filter({score = eq(1.2)})
+    assert(#ids == 0, "test number eq failed");
+    ids = Set(ids);
+    ids = Test:filter({score = eq(0.1)})
+    assert(#ids == 1, "test number eq failed");
+    ids = Set(ids);
+    assert(ids['5'], "test number eq failed");
+    test1:update("score", 1.0);
+    test3:update("score", 1.2);
+    test5:update("score", 2.1);
+
+
+    --test string uneq
+    test1:update("name", "yyy");
+    test3:update("name", "xxxx1");
+    ids = Test:filter({name = eq("xxxx")})
+    assert(#ids == 1, "test string eq failed");
+    ids = Set(ids);
+    assert(ids['2'], "test string eq failed");
+    ids = Test:filter({name = eq("xxxx1")})
+    assert(#ids == 3, "test string eq failed");
+    ids = Set(ids);
+    assert(ids['3'], "test string eq failed");
+    assert(ids['4'], "test string eq failed");
+    assert(ids['5'], "test string eq failed");
+    ids = Test:filter({name = eq("yyy")})
+    assert(#ids == 1, "test string eq failed");
+    ids = Set(ids);
+    assert(ids['1'], "test string eq failed");
+    test1:update("name", "xxxx");
+    test3:update("name", "xxxx");
+    print("HASH INDEX for Model:update() PASSED");
+
    
+    --for save() 
+    --test number eq
+    test1["score"] = 2.0; test1:save()
+    test3["score"] = 1.1;test3:save()
+    test5["score"] = 0.1;test5:save()
+
+    ids = Test:filter({score = eq(1.1)})
+    assert(#ids == 2, "test number eq failed");
+    ids = Set(ids);
+    assert(ids['2'], "test number eq failed");
+    assert(ids['3'], "test number eq failed");
+    ids = Test:filter({score = eq(2.0)})
+    assert(#ids == 3, "test number eq failed");
+    ids = Set(ids);
+    assert(ids['1'], "test number eq failed");
+    assert(ids['4'], "test number eq failed");
+    assert(ids['7'], "test number eq failed");
+    ids = Test:filter({score = eq(1)})
+    assert(#ids == 0, "test number eq failed");
+    ids = Set(ids);
+    ids = Test:filter({score = eq(1.2)})
+    assert(#ids == 0, "test number eq failed");
+    ids = Set(ids);
+    ids = Test:filter({score = eq(0.1)})
+    assert(#ids == 1, "test number eq failed");
+    ids = Set(ids);
+    assert(ids['5'], "test number eq failed");
+    test1:update("score", 1.0);
+    test3:update("score", 1.2);
+    test5:update("score", 2.1);
+
+
+    --test string uneq
+    test1.name= "yyy"; test1:save()
+    test3.name= "xxxx1"; test3:save()
+    ids = Test:filter({name = eq("xxxx")})
+    assert(#ids == 1, "test string eq failed");
+    ids = Set(ids);
+    assert(ids['2'], "test string eq failed");
+    ids = Test:filter({name = eq("xxxx1")})
+    assert(#ids == 3, "test string eq failed");
+    ids = Set(ids);
+    assert(ids['3'], "test string eq failed");
+    assert(ids['4'], "test string eq failed");
+    assert(ids['5'], "test string eq failed");
+    ids = Test:filter({name = eq("yyy")})
+    assert(#ids == 1, "test string eq failed");
+    ids = Set(ids);
+    assert(ids['1'], "test string eq failed");
+    test1:update("name", "xxxx");
+    test3:update("name", "xxxx");
+    print("HASH INDEX for Model:save() PASSED");
+
+
+    test1:fakeDel();
+    test6:fakeDel();
+    ids = Test:filter({name = eq("xxxx")})
+    assert(#ids == 2, "test string eq failed");
+    ids = Set(ids);
+    assert(ids['2'], "test string eq failed");
+    assert(ids['3'], "test string eq failed");
+    ids = Test:filter({name = eq("xxxx2")})
+    assert(#ids == 0, "test string eq failed");
+    ids = Set(ids);
+    
+    ids = Test:filter({score = eq(1)})
+    assert(#ids == 0, "test string eq failed");
+    ids = Set(ids);
+    ids = Test:filter({score = eq(3)})
+    assert(#ids == 0, "test string eq failed");
+    ids = Set(ids);
+
+    Test:restoreDeleted(1);
+    Test:restoreDeleted(6);
+    ids = Test:filter({name = eq("xxxx")})
+    assert(#ids == 3, "test string eq failed");
+    ids = Set(ids);
+    assert(ids['1'], "test string eq failed");
+    assert(ids['2'], "test string eq failed");
+    assert(ids['3'], "test string eq failed");
+    ids = Test:filter({name = eq("xxxx2")})
+    assert(#ids == 1, "test string eq failed");
+    ids = Set(ids);
+    assert(ids['6'], "test string eq failed");
+
+    ids = Test:filter({score = eq(1)})
+    assert(#ids == 1, "test string eq failed");
+    ids = Set(ids);
+    assert(ids['1'], "test string eq failed");
+    ids = Test:filter({score = eq(3)})
+    assert(#ids == 1, "test string eq failed");
+    ids = Set(ids);
+    assert(ids['6'], "test string eq failed");
+    print("HASH INDEX for Model:fakeDelFromRedis() and Model:restoreDeleted() PASSED");
+
+
+
+    test7:del();
+    ids = Test:filter({score = eq(2)})
+    assert(#ids == 1, "test string eq failed");
+    ids = Set(ids);
+    assert(ids['4'], "test string eq failed");
+    ids = Test:filter({name = "xxxx3"})
+    assert(#ids == 0, "test string eq failed");
+    ids = Set(ids);
+    print("HASH INDEX for Model:delFromRedis() PASSED");
+
+
     print("HASH INDEX FILTER PASSED");
     print("!!!!!!!!!!!!! congaratulations !!!!!!!!!!!!!");
 end
