@@ -1665,44 +1665,64 @@ Model = Object:extend {
 			-- objs are already integrated instances
 			walkcheck(objs)			
 		else
-		--[[	-- make partially get value containing 'id' default
-			local qfs = {'id'}
-			if is_query_table then
-				for k, _ in pairs(query_args) do
-					tinsert(qfs, k)
-				end
-			else
-				-- use precollected fields
-				-- if model has set '__use_rule_index' manually, collect all fields to index
-				-- if not set '__use_rule_index' manually, collect fields with 'index=true' in their field description table
-				-- if not set '__use_rule_index' manually, and not set 'index=true' in any field, collect NOTHING
-				--DEBUG('__rule_index_fields', self.__rule_index_fields)
-				for _, k in ipairs(self.__rule_index_fields) do
-					tinsert(qfs, k)
-				end
-			end
-			table.sort(qfs)
-			local objs
-			--DEBUG(qfs)
-			-- == 1, means only have 'id', collect nothing on fields 
-			if #qfs == 1 then
-				--DEBUG('Enter full pipeline branch')
-				-- collect nothing, use 'hgetall' to retrieve, partially_got is false
-				objs = getFromRedisPipeline(self, all_ids)
-			else
-				--DEBUG('Enter partial pipeline branch')
-				-- use hmget to retrieve, now the objs are partial objects
-				objs = getPartialFromRedisPipeline(self, all_ids, qfs)
-				partially_got = true
-			end
-			walkcheck(objs)	-]]		
+            local hash_index_query_args = {};
+            local hash_index_flag = false;
+            local raw_filter_flag = false;
 
-		    -- here, all_ids is the all instance id to query_args now
-            query_set = QuerySet(mih.filter(self,query_args,logic));
-            --all_ids = mih.filter(self,query_args,logic);
-            --for i,v in ipairs(all_ids) do 
-			--    tinsert(query_set, v)
-            --end
+            for field,value in pairs(query_args) do 
+                if self.__fields[field].indexType ~= nil then 
+                    hash_index_query_args[field] = value;
+                    query_args[field] = nil; 
+                    hash_index_flag = true;
+                else
+                    raw_filter_flag = true;
+                end
+            end
+
+            if hash_index_flag then  
+                all_ids = mih.filter(self,query_args,logic);
+            else
+			    -- all_ids is id string list
+    			all_ids = self:allIds()
+            end
+
+            if raw_filter_flag then 
+               	-- make partially get value containing 'id' default
+	    		local qfs = {'id'}
+	    		if is_query_table then
+		    		for k, _ in pairs(query_args) do
+			    		tinsert(qfs, k)
+				    end
+    			else
+	    			-- use precollected fields
+		    		-- if model has set '__use_rule_index' manually, collect all fields to index
+			    	-- if not set '__use_rule_index' manually, collect fields with 'index=true' in their field description table
+				    -- if not set '__use_rule_index' manually, and not set 'index=true' in any field, collect NOTHING
+    				--DEBUG('__rule_index_fields', self.__rule_index_fields)
+	    			for _, k in ipairs(self.__rule_index_fields) do
+		    			tinsert(qfs, k)
+			    	end
+    			end
+	    		table.sort(qfs)
+
+		    	local objs
+			    --DEBUG(qfs)
+    			-- == 1, means only have 'id', collect nothing on fields 
+	    		if #qfs == 1 then
+		    		--DEBUG('Enter full pipeline branch')
+			    	-- collect nothing, use 'hgetall' to retrieve, partially_got is false
+				    objs = getFromRedisPipeline(self, all_ids)
+    			else
+	    			--DEBUG('Enter partial pipeline branch')
+		    		-- use hmget to retrieve, now the objs are partial objects
+			    	objs = getPartialFromRedisPipeline(self, all_ids, qfs)
+				    partially_got = true
+    			end
+	    		walkcheck(objs)	
+            else
+		        -- here, all_ids is the all instance id to query_args now
+                query_set = QuerySet(all_ids);
+            end
 		end
 		
 		-- here, _t_query_set is the all instance fit to query_args now
