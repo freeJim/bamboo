@@ -1679,8 +1679,8 @@ Model = Object:extend {
                 end
             end
 
-            if hash_index_flag then  
-                all_ids = mih.filter(self,query_args,logic);
+            if hash_index_flag then 
+                all_ids = mih.filter(self,hash_index_query_args,logic);
             else
 			    -- all_ids is id string list
     			all_ids = self:allIds()
