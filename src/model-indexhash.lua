@@ -105,9 +105,12 @@ end
 -- create or update the index of the object  or the object field
 -- if create, must be called after save() and the newIndex must be true
 -- if update, must be called before save() and the newIndex must be false
--- NOTE: the application developer should not call this function, becuase 
+-- NOTE: 1.the application developer should not call this function, becuase 
 --       it autolly be called in the Model:save(), Model:del(), and so on.      
-function index(self,newIndex,field)
+--       2.the value argment is usefull when the newIndex equal false and 
+--         field argment not equal nil. Add it for the Model:update() only, so
+--         field and value must not be table.
+function index(self,newIndex,field,value)
 	I_AM_INSTANCE(self)
     if field then 
 	    checkType(field, 'string')
@@ -115,27 +118,27 @@ function index(self,newIndex,field)
 
     -- start index
     if newIndex then 
-        if field then -- index for field 
+        -- when new ,it can not create index for the field only,
+        --[[if field then -- index for field 
             indexType = self.__fields[field].indexType;
             if indexType then 
                 indexField(self, field, indexType, nil)
             end
-        else -- index for object
+        else -- index for object]]
             for field, def in pairs(self.__fields) do
                 if def.indexType then
                     indexField(self, field, def.indexType, nil);
                 end
             end
-        end
+--        end
     else
-        local oldObj = self:getClass():getById(self.id);
-
         if field then -- index for field 
             indexType = self.__fields[field].indexType;
             if indexType then 
-                indexField(self, field, nil, oldObj)
+                indexField(self, field, indexType, value)
             end
         else -- index for object
+            local oldObj = self:getClass():getById(self.id);
             for field, def in pairs(self.__fields) do
                 if def.indexType then
                     indexField(self, field, def.indexType, oldObj);
