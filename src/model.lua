@@ -1669,15 +1669,21 @@ Model = Object:extend {
             local hash_index_flag = false;
             local raw_filter_flag = false;
 
-            for field,value in pairs(query_args) do 
-                if self.__fields[field].indexType ~= nil then 
-                    hash_index_query_args[field] = value;
-                    query_args[field] = nil; 
-                    hash_index_flag = true;
-                else
-                    raw_filter_flag = true;
+            if type(query_args) == 'function' then
+                hash_index_flag = false;
+                raw_filter_flag = true;
+            else
+                for field,value in pairs(query_args) do 
+                    if self.__fields[field].indexType ~= nil then 
+                        hash_index_query_args[field] = value;
+                        query_args[field] = nil; 
+                        hash_index_flag = true;
+                    else
+                        raw_filter_flag = true;
+                    end
                 end
             end
+
 
             if hash_index_flag then 
                 all_ids = mih.filter(self,hash_index_query_args,logic);
