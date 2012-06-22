@@ -369,7 +369,14 @@ local function run(conn, config)
     -- conn.reqs is the socket pull from monserver
     poller:add(conn.reqs, zmq.POLLIN, monserver_request)
     -- start the main loop
-    poller:start()
+    if config.prof then 
+        local prof = require 'profiler'
+        prof.start();
+        poller:start()
+        prof.stop();
+    else
+        poller:start()
+    end
 
     print('Bamboo main loop aborted!')
 end

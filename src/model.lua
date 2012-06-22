@@ -392,7 +392,9 @@ local delFromRedis = function (self, id)
 	local index_key = getIndexKey(self)
 
     --del hash index 
-    mih.indexDel(self);
+    if bamboo.config.index_hash then 
+        mih.indexDel(self);
+    end
 	
 	local fields = self.__fields
 	-- in redis, delete the associated foreign key-value store
@@ -430,7 +432,9 @@ local fakedelFromRedis = function (self, id)
 	local index_key = getIndexKey(self)
 
     --del hash index 
-    mih.indexDel(self);
+    if bamboo.config.index_hash then 
+        mih.indexDel(self);
+    end
 	
 	local fields = self.__fields
 	-- in redis, delete the associated foreign key-value store
@@ -493,7 +497,9 @@ local restoreFakeDeletedInstance = function (self, id)
 	-- remove from deleted collector
 	db:zrem(dcollector, model_key)
 
-    mih.index(instance,true);--create hash index
+    if bamboo.config.index_hash then 
+        mih.index(instance,true);--create hash index
+    end
 
 	return instance
 end
@@ -1595,6 +1601,7 @@ Model = Object:extend {
 			end
 			-- else go ahead
 		end
+
 		
 		if is_query_table then
 
@@ -1669,10 +1676,11 @@ Model = Object:extend {
             local hash_index_flag = false;
             local raw_filter_flag = false;
 
+
             if type(query_args) == 'function' then
                 hash_index_flag = false;
                 raw_filter_flag = true;
-            else
+            elseif bamboo.config.index_hash then
                 for field,value in pairs(query_args) do 
                     if self.__fields[field].indexType ~= nil then 
                         hash_index_query_args[field] = value;
@@ -1682,6 +1690,9 @@ Model = Object:extend {
                         raw_filter_flag = true;
                     end
                 end
+            else
+                raw_filter_flag = true;
+                hash_index_flag = false;
             end
 
 
@@ -1727,7 +1738,10 @@ Model = Object:extend {
 	    		walkcheck(objs)	
             else
 		        -- here, all_ids is the all instance id to query_args now
-                query_set = QuerySet(all_ids);
+                --query_set = QuerySet(all_ids);
+                for i,v in ipairs(all_ids) do 
+                    tinsert(query_set,self:getById(tonumber(v)));
+                end
             end
 		end
 		
@@ -1748,7 +1762,7 @@ Model = Object:extend {
 			-- retrieve all objects' id
 			local id_list = {}
 			for _, v in ipairs(_t_query_set) do
-				tinsert(id_list, v.id or v) --when query set come from hash index pure ,the v is the id
+				tinsert(id_list, v.id) --when query set come from hash index pure ,the v is the id
 			end
 
 			-- add to index, here, we index all instances fit to query_args, rather than results applied extra limitation conditions
@@ -2254,7 +2268,9 @@ Model = Object:extend {
 			-- update object hash store key
 			db:hmset(model_key, unpack(store_kv))
             
-            mih.index(self,true);--create hash index
+            if bamboo.config.index_hash then 
+                mih.index(self,true);--create hash index
+            end
 			end)
 		else
 			-- update case
@@ -2265,7 +2281,9 @@ Model = Object:extend {
 
 			local options = { watch = {index_key}, cas = true, retry = 2 }
 			replies = db:transaction(options, function(db)
-            mih.index(self,false);--update hash index
+            if bamboo.config.index_hash then 
+                mih.index(self,false);--update hash index
+            end
 
 			local score = db:zscore(index_key, self[indexfd])
 			assert(score == self.id or score == nil, "[Error] save duplicate to an unique limited field, aborted!")
@@ -2319,7 +2337,9 @@ Model = Object:extend {
 		-- update the lua object
 		self[field] = new_value
         --hash index
-        mih.index(self,false,field);
+        if bamboo.config.index_hash then 
+            mih.index(self,false,field);
+        end
 
         --update object in database
 		if new_value == nil then
@@ -2996,11 +3016,6 @@ Model = Object:extend {
 		return self.__fields[field]
 		
 	end;
-
-
-
-   --indexHash = mih.index;
-   --filterByIndexHash = mih.filter;
 }
 
 local QuerySetMeta = setProto({__spectype='QuerySet'}, Model)
