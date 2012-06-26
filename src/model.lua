@@ -1807,6 +1807,9 @@ Model = Object:extend {
 	-- 7. removeCustomMember
 	-- 8. hasCustomMember
 	-- 9. numCustom
+
+    -- 10. incrCustom   only number
+    -- 11. decrCustom   only number
 	--
 	--- five store type
 	-- 1. string
@@ -1814,10 +1817,28 @@ Model = Object:extend {
 	-- 3. set
 	-- 4. zset
 	-- 5. hash
+    -- 6. fifo   , scores is the length of fifo
 	-------------------------------------------------------------------
-	
+    
+	-- store customize key-value pair to db
+	-- now: st is string, and value is number 
+    -- if no this key, the value is 0 before performing the operation
+    incrCustom = function(self,key,step) 
+		I_AM_CLASS_OR_INSTANCE(self)
+		checkType(key, 'string')
+		local custom_key = self:isClass() and getCustomKey(self, key) or getCustomIdKey(self, key)
+        db:incrby(custom_key,step or 1) 
+    end;
+    decrCustom = function(self,key,step) 
+		I_AM_CLASS_OR_INSTANCE(self)
+		checkType(key, 'string')
+		local custom_key = self:isClass() and getCustomKey(self, key) or getCustomIdKey(self, key)
+        db:decrby(custom_key,step or 1);
+    end;
+
 	-- store customize key-value pair to db
 	-- now: it support string, list and so on
+    -- if fifo ,the scores is the length of the fifo
 	setCustom = function (self, key, val, st, scores)
 		I_AM_CLASS_OR_INSTANCE(self)
 		checkType(key, 'string')
